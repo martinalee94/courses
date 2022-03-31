@@ -4,16 +4,14 @@ import socket
 import os
 from threading import Thread
 
-IP="127.0.0.1"
-PORT=10090
-ADDR=(IP, PORT)
+
 SIZE=1024
 FORMAT="utf-8"
 SERVER_DATA_PATH="server_data"
 
 def main():
     server=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(ADDR)
+    server.bind(("0.0.0.0",10090))
     server.listen()
 
     while True:
@@ -25,7 +23,8 @@ def main():
         request_method=data[0]
         page=data[1]
         print(data)
-   
+
+        #처음 login할 때 "/"로 바로 들어가거나 주소창에서 "/index.html"를 붙여서 들어간다.
         if (page == "/" or page == "/index.html"):
             if request_method == "GET":
                 htmladdr = "/index.html"
@@ -36,13 +35,21 @@ def main():
             if request_method=="POST":
                 user, pw=data[-1].split('&')
                 user= user.split('=')[1]
-                if not os.path.isdir("./{}".format(user)):
-                    os.mkdir("./{}".format(user))
-                htmladdr="/storage.html"
-                read_html(htmladdr,client)
+                if(user=='' or pw==''):
+                    pass
+                else:
+                    if not os.path.isdir("./{}".format(user)):
+                        os.mkdir("./{}".format(user))
+                    htmladdr="/storage.html"
+                    read_html(htmladdr,client)
+
+            #storage는 GET(주소창에 쳐도 되는 방식)으로 들어갈 수 없다. 
             elif request_method=="GET":
-                filename=page.split("?submitted_file")[1].split("&submit=Submit")[0]
-                upload(filename,c)
+                client.send('HTTP/1.1 200 OK\r\n\r\n403Forbidden'.encode('utf-8'))
+                #filename=page.split("?submitted_file")[1].split("&submit=Submit")[0]
+                #filepath=os.path.join(page.split(filename)[0])
+                #print(filepath)
+                # upload(path,c)
 
 
 
@@ -55,12 +62,13 @@ def main():
                     client.send(str.encode("Location: {}\n".format("./index.html")))
 
         elif(page=="/cookie" or page == "/cookie.html"):
+            #Cookie있으면 cookie접근 가능
             if "Cookie:" in data:
                 htmladdr = "/cookie.html"
                 read_html(htmladdr,client)
-            
+            #??
             else:
-                client.send("403Forbidden".encode('utf-8'))
+                client.send(('HTTP/1.1 200 OK\r\n\r\n403Forbidden').encode('utf-8'))
         
         client.close()
 
@@ -71,16 +79,11 @@ def read_html(html,c):
     htmlcode=f.read()
     c.send(('HTTP/1.1 200 OK\r\n\r\n'+htmlcode).encode('utf-8'))
     f.close()
-    print(htmlcode)
+    #print(htmlcode)
 
-def upload_file(file,c):
-    f=open(file,'w')
-    #하는중..
-    f.close()
-
-
-
-
+# def upload_file(path,c):
+#     with open(path,'w') as f:
+#         f.write()
 
 
 if __name__=="__main__":
